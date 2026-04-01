@@ -1,0 +1,28 @@
+name: K8s Auto Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to m7i Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/kubernetes_CI-CD
+            git pull origin main
+            eval $(minikube docker-env)
+            docker build -t my-flask-app:latest .
+            kubectl apply -f redis.yaml
+            kubectl apply -f app-deployment.yaml
+            kubectl apply -f app-service.yaml
+            kubectl rollout restart deployment flask-app
